@@ -5,37 +5,56 @@ port = 2345
 server = TCPServer.new('localhost', port)
 puts "Listening on port #{port}"
 
+contentLengthRegex = /Content\-Length\:\s(?<length>\d+)/
 
 while session = server.accept
   begin
-    
-    puts "go"
-    
-    session.puts <<-HEREDOC
-    HTTP/1.1 200 OK
-    Content-type:text/html
-    The time is #{Time.now.strftime "%H:%M:%S(%L)"}
-    HEREDOC
-    
-    if ((request = session.gets) && (request.chomp.length > 0)) then
+    bodyLength = 0
+    body = "hello"
+    while ((request = session.gets) && 
+      (!request.chomp.nil?) && 
+      (request.chomp.length > 0)) 
       
-      headers = session.recv(1024)
-      headers =~ /Content-Length: (\d+)/ # get content length
-      body    = $1 ? session.recv($1.to_i) : '' # <- call again to get body if there is one
-      
-      puts headers +" "+ body
-      
+      matches = contentLengthRegex.match(request.chomp)
+
+      puts request.chomp
+
+      if !matches.nil? then
+        begin
+        bodyLength = matches["length"].to_i
+        rescue 
+          puts "error"
+        end
+      end
+
     end
-    
-    #while ((request = session.gets) && (request.chomp.length > 0))
-    #print request.chomp
-    # playLine(request.chomp)
-    #sleep 1
-    #end
-  rescue Errno::EPIPE
-    puts "Connection broke!"
+
+    if bodyLength > 0 then
+      body = request.read(bodyLength)
+    end
+        
+    response_body = 
+    <<-HTML
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <h1>#{body}</h1>
+      </body>
+    </html>
+    HTML
+
+    headers = 
+    <<-HTTP
+    HTTP/1.1 200 OK
+    Content-type: text/html
+    HTTP
+
+    session.puts headers
+    session.puts "\r\n\r\n"
+    session.puts response_body
+    session.puts "\r\n"
   rescue StandardError => e
-    puts e
+    puts "error: " + e.message
   end
+  session.close
 end
-session.close
