@@ -1,5 +1,7 @@
-Dir.chdir('script dir')
+# Welcome to Sonic Pi v3.1
 
+
+Dir.chdir('C:\Users\Giacomo\Desktop')
 
 Synthetizers = {
   'sine' => :sine,
@@ -27,75 +29,90 @@ GoldenRatio = 1.618034
 
 def mapWordToNote(word)
   x = word.length % 7
-  y = word.length / 7
-  shift = 0
-  if one_in(4)
-    shift = (y%3)
-  end
+  shift = (Notes[6] + 20) - word.length
   xnote = Notes[x] + shift
-  if one_in(7)
-    xchord = Chords[x%3]
-  end
-  return xnote, xchord, x
+  return xnote > 0 ? xnote : Notes[0]
 end
 
 
-def playN(noteVal, chordType, pauseL)
-  use_synth Synthetizers['fm']
-  isChord = !chordType.nil?
-  rel = pauseL * GoldenRatio
-  pauseLength = (pauseL.to_f || 0.00) / 5
-  if one_in(8)
-    pauseLength = pauseLength * (pauseL%4)
+def playN(noteVal, chordType)
+  with_fx :reverb, hall:0.2 do
+    use_synth Synthetizers['fm']
+    isChord = !chordType.nil?
+    rel = if one_in(5) then noteVal / GoldenRatio else GoldenRatio/3 end
+    if one_in(7)
+      use_synth Synthetizers['sine']
+    end
+    if isChord
+      print chordType
+      play (chord noteVal, chordType), sustain: rel
+    else
+      play note noteVal, release: rel
+    end
   end
-  if one_in(7)
-    use_synth Synthetizers['sine']
-  end
-  print pauseLength
-  if isChord
-    print chordType
-    
-    play (chord noteVal, chordType), sustain: rel
-  else
-    
-    play note noteVal, release: rel
-  end
-  sleep pauseLength
 end
 
 def cleanString(str)
   str.encode!('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
 end
 
-live_loop :beats do
-  sample :bd_808, compress: 1
-  sleep 1
+
+def DrumsLoop(drumPauseVariation, drumRateVariation)
+  with_fx :reverb, hall:0.8 do
+    with_fx  :distortion, mix:0.1,pre_amp:1 do
+      #live_loop :beats do
+      sample :bd_808, amp:10, compress:1
+      sleep 0.94
+      #end
+      #live_loop :snares do
+      sleep GoldenRatio * 0.3 * drumPauseVariation
+      sample :drum_snare_soft, rate:1.5 * drumRateVariation, amp:0.9
+      #end
+    end
+  end
 end
 
 
-with_fx :reverb, hall:0.2 do
-  live_loop :one do
-    f = 'words.txt'
-    bias = -10
-    File.open(f, 'r:UTF-8') do |fl|
-      while l = fl.gets
-        str = cleanString(l)
-        words = l.split('  ')
-        words.each do |w|
-          print w
-          #e3,5,major
-          if !Monogram[w].nil?
-            print 'monogram'
-            n,ch,p = Monogram[w],nil,1
-          else
-            n,ch,p = mapWordToNote(w)
-          end
-          playN(n+bias,ch,p)
-        end
-      end
-      fl.close
-      print "next"
+def playLine(l)
+  bias = -10
+  str = cleanString(l) #utf-8
+  if (str.start_with? "//") then raise ArgumentError, "jump" end
+  words = l.split(' ')
+  words.each do |w|
+    print w
+    #e3,5,major
+    wlower = w.downcase
+    if !Monogram[wlower].nil?
+      print 'monogram'
+      n,ch = Monogram[wlower],:major7
+    else
+      n,p = mapWordToNote(w)
+      ch = nil
     end
-    
+    ps = (p.to_f || 0.00) / 5
+    in_thread do
+      drumVary = (ps < 1 ? 1 : ps)
+      DrumsLoop(w.length, drumVary)
+      sleep 0.5
+      playN(n+bias,ch)
+    end
+  end
+  sleep (if one_in(3) then 1 else GoldenRatio end)
+end
+
+
+live_loop :one do
+  #def ReadFileAndLoop()
+  f = 'words.txt'
+  File.open(f, 'r:UTF-8') do |fl|
+    while l = fl.gets
+      begin
+        playLine(l)
+      rescue ArgumentError => a
+        next
+      end
+    end
+    fl.close
+    print "next"
   end
 end
