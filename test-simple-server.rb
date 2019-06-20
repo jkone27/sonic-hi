@@ -1,4 +1,4 @@
-## not working, to be fixed...
+## works
 
 require 'socket'
 port = 2345
@@ -21,6 +21,7 @@ while session = server.accept
 
       if !matches.nil? then
         begin
+	puts matches
         bodyLength = matches["length"].to_i
         rescue 
           puts "error"
@@ -30,7 +31,7 @@ while session = server.accept
     end
 
     if bodyLength > 0 then
-      body = request.read(bodyLength)
+      body = session.read(bodyLength)
     end
         
     response_body = 
@@ -55,6 +56,17 @@ while session = server.accept
     session.puts "\r\n"
   rescue StandardError => e
     puts "error: " + e.message
+    headers = ""
+    headers = 
+    <<-HTTP
+    HTTP/1.1 500 Internal Server Error
+    Content-type: text/html
+    HTTP
+
+    session.puts headers
+    session.puts "\r\n\r\n"
+    session.puts e.message
+    session.puts "\r\n"
   end
   session.close
 end
