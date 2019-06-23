@@ -1,12 +1,6 @@
-
-#good one
-
 Dir.chdir('C:\Users\Giacomo\Desktop')
 
 Notes = [:a,:b,:c,:d,:e,:f,:g].ring
-
-GoldenRatio = 1.618034
-
 
 Possession = [
   'i',
