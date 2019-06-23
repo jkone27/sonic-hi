@@ -2,7 +2,6 @@
 #good one
 
 Dir.chdir('C:\Users\Giacomo\Desktop')
-#https://freesound.org/
 
 Notes = [:a,:b,:c,:d,:e,:f,:g].ring
 
@@ -22,45 +21,20 @@ Possession = [
   'yours'
 ]
 
-Action = [
-  'make',
-  'do',
-  'tell',
-  'call',
-  'ask',
-  'give',
-  'take',
-  'bring',
-  'talk',
-]
-
-Others = [
-  'to',
-  'the',
-  'and',
-  'a',
-  'that',
-  'it',
-  'not',
-  'as',
-  'this',
-  'but',
-  'where',
-  'why'
-]
-
 def mapWordToNote(word)
   if (Possession).include? word.downcase then
-    play chord(Notes[word.length], :minor)
+    Notes[word.length]
   else
     scale(:A2, [:minor].sample, num_octaves: 1).reverse[word.length]
   end
 end
 
 def playN(notes)
-  with_fx :reverb, mix:0.5 do
-    use_synth Synthetizers['sin']
-    play_pattern_timed notes, [0.3,0.4].sample
+  with_fx :reverb, mix:0.8, amp:0.2 do
+    with_fx :lpf, cutoff: 100 do
+      use_synth Synthetizers['sin']
+      play_pattern_timed notes, [0.3,0.4].sample
+    end
   end
 end
 
@@ -82,6 +56,13 @@ def playLine(l)
   #sleep GoldenRatio/3
 end
 
+#https://freesound.org/ -
+#https://freesound.org/people/straget/sounds/412308/
+
+live_loop :samp do
+  sample "samples",1
+  sleep sample_duration "samples",1
+end
 
 live_loop :one do
   #def ReadFileAndLoop()
